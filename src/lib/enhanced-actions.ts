@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import { z } from "zod";
 
@@ -62,6 +62,7 @@ export async function createTodoWithValidation(
 
     // Revalidate with tags for better cache control
     revalidateTag(`user-todos-${userId}`);
+    revalidatePath("/");
 
     return { 
       success: true, 
@@ -135,6 +136,7 @@ export async function updateTodoWithValidation(
     });
 
     revalidateTag(`user-todos-${userId}`);
+    revalidatePath("/");
 
     return {
       success: true,
@@ -206,6 +208,7 @@ export async function batchUpdateTodos(
     });
 
     revalidateTag(`user-todos-${userId}`);
+    revalidatePath("/");
 
     return { success: true, data: { operationsCompleted: operations.length } };
   } catch (error) {
