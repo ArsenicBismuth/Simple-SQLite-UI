@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     // Set watchOptions to exclude Windows system directories
     config.watchOptions = {
       ignored: [
+        '**/prisma/**',
         '**/node_modules/**',
         '**/.git/**',
         '**/Application Data/**',
