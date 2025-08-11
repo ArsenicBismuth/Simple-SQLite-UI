@@ -37,3 +37,18 @@ export type ActionResult<T = unknown> = {
   error: string;
   code?: string;
 };
+
+export type UserWithTodoCount = {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  todoCount: number;
+};
+
+export type GetAllUsersResult = {
+  success: true;
+  users: UserWithTodoCount[];
+} | {
+  success: false;
+  error: string;
+};

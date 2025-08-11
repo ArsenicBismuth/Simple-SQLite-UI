@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import UserAuth from "@/components/user-auth";
 import TodoList from "@/components/todo-list";
-import { getUserWithTodos } from "@/lib/actions";
+import AdminPanel from "@/components/admin-panel";
+import { getUserWithTodos, isAdmin } from "@/lib/actions";
 import type { GetUserWithTodosResult } from "@/types";
 
 function useLocalUuid() {
   const [uuid, setUuid] = useState<string | null>(null);
+  const [admin, setAdmin] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [userData, setUserData] = useState<GetUserWithTodosResult | null>(null);
@@ -31,6 +33,14 @@ function useLocalUuid() {
       // Verify the UUID exists in the database
       setIsVerifying(true);
       try {
+        // Check if admin
+        const admin = await isAdmin(uuid);
+        setAdmin(admin);
+        if (admin) {
+          setUuid(uuid);
+          return;
+        }
+
         const result = await getUserWithTodos(uuid);
         if (result.success) {
           // UUID is valid, use it
@@ -66,11 +76,11 @@ function useLocalUuid() {
     setUserData(null);
   }, []);
 
-  return { uuid, save, clear, isLoading: isLoading || isVerifying, userData, error };
+  return { uuid, save, clear, isLoading: isLoading || isVerifying, userData, admin, error };
 }
 
 export default function ClientLayout() {
-  const { save, isLoading, userData, error } = useLocalUuid();
+  const { uuid, save, isLoading, userData, admin, error } = useLocalUuid();
 
   if (isLoading) {
     return (
@@ -82,9 +92,14 @@ export default function ClientLayout() {
     );
   }
 
-  if (!userData) {
+  if (!userData && !admin) {
     return <UserAuth onUserSelected={save} error={error} />;
   }
 
-  return <TodoList userData={userData} isLoading={isLoading} />;
+  return (
+    <div>
+      {admin && uuid && <AdminPanel currentUserId={uuid} />}
+      {!admin && userData && <TodoList userData={userData} isLoading={isLoading} />}
+    </div>
+  );
 }

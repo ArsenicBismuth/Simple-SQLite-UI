@@ -175,3 +175,42 @@ export async function reorderTodos(userId: string, reorders: Array<{ id: string;
     return { success: false, error: String(error) };
   }
 }
+
+// Admin function to check if user is admin
+export async function isAdmin(userId: string): Promise<boolean> {
+  return userId === process.env.ADMIN_ID;
+}
+
+// Admin action to get all users with todo counts
+export async function getAllUsersWithTodoCounts(requestingUserId: string) {
+  try {
+    // Check if requesting user is admin
+    if (!await isAdmin(requestingUserId)) {
+      return { success: false, error: "Unauthorized - Admin access required" };
+    }
+
+    const users = await db.user.findMany({
+      include: {
+        _count: {
+          select: {
+            todos: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    const usersWithCounts = users.map(user => ({
+      id: user.id,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      todoCount: user._count.todos
+    }));
+
+    return { success: true, users: usersWithCounts };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+}
