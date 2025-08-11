@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useOptimistic } from "react";
+import { useTransition, useOptimistic } from "react";
 import { updateTodo, deleteTodo } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +11,7 @@ type Todo = {
   text: string;
   done: boolean;
   order: number;
-  statusChangedAt?: string;
+  statusChangedAt?: Date | null;
   resetType?: ResetType;
   resetHour?: number | null;
   resetDow?: number | null;

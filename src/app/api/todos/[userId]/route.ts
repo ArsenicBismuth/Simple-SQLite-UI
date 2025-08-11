@@ -17,13 +17,21 @@ export async function POST(
     const order = (maxOrder._max.order ?? 0) + 1;
 
     // Allow optional per-item reset params, default to daily 9:00
-    const data: any = { userId, text, order };
     const rt = typeof body.resetType === "string" ? body.resetType.toUpperCase() : null;
-    if (rt === "DAILY" || rt === "WEEKLY") data.resetType = rt;
-    if (typeof body.resetHour === "number") data.resetHour = body.resetHour;
-    if (typeof body.resetDow === "number") data.resetDow = body.resetDow;
+    const resetType = (rt === "DAILY" || rt === "WEEKLY") ? rt : "DAILY";
+    const resetHour = typeof body.resetHour === "number" ? body.resetHour : 9;
+    const resetDow = typeof body.resetDow === "number" ? body.resetDow : null;
 
-    const todo = await db.todo.create({ data });
+    const todo = await db.todo.create({ 
+      data: {
+        userId,
+        text,
+        order,
+        resetType,
+        resetHour,
+        resetDow,
+      }
+    });
     return NextResponse.json({ todo: { ...todo, statusChangedAt: todo.statusChangedAt ?? todo.updatedAt } });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });

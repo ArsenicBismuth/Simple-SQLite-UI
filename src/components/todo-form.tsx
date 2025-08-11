@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { addTodo } from "@/lib/actions";
 
-type ResetType = "DAILY" | "WEEKLY";
+
 
 interface TodoFormProps {
   userId: string;

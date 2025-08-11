@@ -2,11 +2,11 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { redirect } from "next/navigation";
+
 import { z } from "zod";
 
 // Enhanced error types
-export type ActionResult<T = any> = 
+export type ActionResult<T = unknown> = 
   | { success: true; data: T }
   | { success: false; error: string; code?: string };
 
@@ -75,7 +75,7 @@ export async function createTodoWithValidation(
     if (error instanceof z.ZodError) {
       return { 
         success: false, 
-        error: error.errors[0]?.message || "Validation failed",
+        error: error.issues[0]?.message || "Validation failed",
         code: "VALIDATION_ERROR"
       };
     }
@@ -122,7 +122,7 @@ export async function updateTodoWithValidation(
     }
 
     // Prepare update data
-    const updateData: any = { ...validatedData };
+    const updateData: Parameters<typeof db.todo.update>[0]['data'] = { ...validatedData };
     
     // If updating done status, set status change timestamp
     if (typeof validatedData.done === "boolean") {
@@ -149,7 +149,7 @@ export async function updateTodoWithValidation(
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0]?.message || "Validation failed",
+        error: error.issues[0]?.message || "Validation failed",
         code: "VALIDATION_ERROR"
       };
     }
@@ -169,7 +169,7 @@ export async function batchUpdateTodos(
   operations: Array<{
     id: string;
     operation: "complete" | "delete" | "reorder";
-    data?: any;
+    data?: unknown;
   }>
 ): Promise<ActionResult> {
   try {
@@ -194,10 +194,14 @@ export async function batchUpdateTodos(
             await tx.todo.delete({ where: { id: op.id } });
             break;
           case "reorder":
-            await tx.todo.update({
-              where: { id: op.id },
-              data: { order: op.data.order }
-            });
+            if (op.data && typeof op.data === 'object' && 'order' in op.data && typeof op.data.order === 'number') {
+              await tx.todo.update({
+                where: { id: op.id },
+                data: { order: op.data.order }
+              });
+            } else {
+              throw new Error(`Invalid reorder data for todo ${op.id}`);
+            }
             break;
         }
       }
@@ -221,7 +225,7 @@ export async function batchUpdateTodos(
 export async function trackUserAction(
   userId: string,
   action: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ) {
   try {
     // In a real app, you might send this to an analytics service

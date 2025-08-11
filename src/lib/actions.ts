@@ -2,7 +2,8 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import type { GetUserWithTodosResult } from "@/types";
+
 
 // Server action to create a new user
 export async function createUser() {
@@ -19,11 +20,10 @@ export async function createUser() {
 }
 
 // Server action to fetch user with todos
-export async function getUserWithTodos(userId: string) {
+export async function getUserWithTodos(userId: string): Promise<GetUserWithTodosResult> {
   try {
     const user = await db.user.findUnique({ 
-      where: { id: userId }, 
-      select: { id: true } 
+      where: { id: userId }
     });
     
     if (!user) {
@@ -60,12 +60,16 @@ export async function addTodo(userId: string, text: string, resetType?: "DAILY" 
     });
     const order = (maxOrder._max.order ?? 0) + 1;
 
-    const data: any = { userId, text: trimmedText, order };
-    if (resetType === "DAILY" || resetType === "WEEKLY") data.resetType = resetType;
-    if (typeof resetHour === "number") data.resetHour = resetHour;
-    if (typeof resetDow === "number") data.resetDow = resetDow;
-
-    const todo = await db.todo.create({ data });
+    const todo = await db.todo.create({ 
+      data: {
+        userId,
+        text: trimmedText,
+        order,
+        resetType: resetType || "DAILY",
+        resetHour: resetHour ?? 9,
+        resetDow: resetDow ?? null,
+      }
+    });
     
     revalidatePath("/");
     
@@ -94,22 +98,22 @@ export async function updateTodo(
   }
 ) {
   try {
-    const data: any = {};
+    const updateData: Parameters<typeof db.todo.update>[0]['data'] = {};
     
-    if (typeof updates.text === "string") data.text = updates.text;
+    if (typeof updates.text === "string") updateData.text = updates.text;
     if (typeof updates.done === "boolean") {
-      data.done = updates.done;
-      data.statusChangedAt = new Date();
+      updateData.done = updates.done;
+      updateData.statusChangedAt = new Date();
     }
     if (updates.resetType === "DAILY" || updates.resetType === "WEEKLY") {
-      data.resetType = updates.resetType;
+      updateData.resetType = updates.resetType;
     }
-    if (typeof updates.resetHour === "number") data.resetHour = updates.resetHour;
-    if (typeof updates.resetDow === "number") data.resetDow = updates.resetDow;
+    if (typeof updates.resetHour === "number") updateData.resetHour = updates.resetHour;
+    if (typeof updates.resetDow === "number") updateData.resetDow = updates.resetDow;
 
     const todo = await db.todo.update({ 
       where: { id: todoId }, 
-      data 
+      data: updateData 
     });
     
     if (todo.userId !== userId) {
