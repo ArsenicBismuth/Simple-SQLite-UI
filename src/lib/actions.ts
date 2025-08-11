@@ -1,7 +1,6 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { revalidatePath } from "next/cache";
 import type { GetUserWithTodosResult } from "@/types";
 
 
@@ -71,8 +70,6 @@ export async function addTodo(userId: string, text: string, resetType?: "DAILY" 
       }
     });
     
-    revalidatePath("/");
-    
     return { 
       success: true, 
       todo: { 
@@ -120,8 +117,6 @@ export async function updateTodo(
       return { success: false, error: "Forbidden" };
     }
     
-    revalidatePath("/");
-    
     return { 
       success: true, 
       todo: { 
@@ -143,8 +138,6 @@ export async function deleteTodo(userId: string, todoId: string) {
       return { success: false, error: "Forbidden" };
     }
     
-    revalidatePath("/");
-    
     return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
@@ -161,8 +154,6 @@ export async function bulkUpdateTodos(userId: string, operation: "markDone", tod
       });
     }
     
-    revalidatePath("/");
-    
     return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
@@ -178,8 +169,6 @@ export async function reorderTodos(userId: string, reorders: Array<{ id: string;
         data: { order: u.order } 
       }))
     );
-    
-    revalidatePath("/");
     
     return { success: true };
   } catch (error) {

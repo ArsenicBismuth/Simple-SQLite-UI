@@ -3,15 +3,46 @@
 import { useCallback, useEffect, useState } from "react";
 import UserAuth from "@/components/user-auth";
 import TodoList from "@/components/todo-list";
+import { getUserWithTodos } from "@/lib/actions";
 
 function useLocalUuid() {
   const [uuid, setUuid] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isVerifying, setIsVerifying] = useState(false);
   
   useEffect(() => {
-    const v = localStorage.getItem("user_uuid");
-    setUuid(v);
-    setIsLoading(false);
+    async function verifyStoredUuid() {
+      const storedUuid = localStorage.getItem("user_uuid");
+      
+      if (!storedUuid) {
+        setUuid(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Verify the UUID exists in the database
+      setIsVerifying(true);
+      try {
+        const result = await getUserWithTodos(storedUuid);
+        if (result.success) {
+          // UUID is valid, use it
+          setUuid(storedUuid);
+        } else {
+          // UUID is invalid, clear it from localStorage
+          localStorage.removeItem("user_uuid");
+          setUuid(null);
+        }
+      } catch {
+        // On error, clear the invalid UUID
+        localStorage.removeItem("user_uuid");
+        setUuid(null);
+      } finally {
+        setIsVerifying(false);
+        setIsLoading(false);
+      }
+    }
+
+    verifyStoredUuid();
   }, []);
 
   const save = useCallback((v: string) => {
@@ -24,7 +55,7 @@ function useLocalUuid() {
     setUuid(null);
   }, []);
 
-  return { uuid, save, clear, isLoading };
+  return { uuid, save, clear, isLoading: isLoading || isVerifying };
 }
 
 export default function ClientLayout() {
