@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 type ResetType = "DAILY" | "WEEKLY";
@@ -25,14 +25,14 @@ function useLocalUuid() {
     const v = localStorage.getItem("user_uuid");
     if (v) setUuid(v);
   }, []);
-  const save = (v: string) => {
+  const save = useCallback((v: string) => {
     localStorage.setItem("user_uuid", v);
     setUuid(v);
-  };
-  const clear = () => {
+  }, []);
+  const clear = useCallback(() => {
     localStorage.removeItem("user_uuid");
     setUuid(null);
-  };
+  }, []);
   return { uuid, save, clear };
 }
 
@@ -61,9 +61,12 @@ export default function Home() {
     setLoading(true);
     fetchUserBundle(uuid)
       .then(setBundle)
-      .catch((e) => setError(String(e)))
+      .catch((e) => {
+        setError(String(e));
+        clear();
+      })
       .finally(() => setLoading(false));
-  }, [uuid]);
+  }, [uuid, clear]);
 
   const handleCreateOrRestore = async () => {
     setError(null);
