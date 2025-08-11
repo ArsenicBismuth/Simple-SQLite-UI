@@ -11,6 +11,7 @@ function useLocalUuid() {
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [userData, setUserData] = useState<GetUserWithTodosResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const storedUuid = localStorage.getItem("user_uuid");
@@ -36,14 +37,13 @@ function useLocalUuid() {
           setUuid(uuid);
           setUserData(result);
         } else {
-          // UUID is invalid, clear it from localStorage
-          localStorage.removeItem("user_uuid");
-          setUuid(null);
+          throw new Error(result.error);
         }
       } catch {
         // On error, clear the invalid UUID
         localStorage.removeItem("user_uuid");
         setUuid(null);
+        setError("Failed to verify UUID");
       } finally {
         setIsVerifying(false);
         setIsLoading(false);
@@ -66,11 +66,11 @@ function useLocalUuid() {
     setUserData(null);
   }, []);
 
-  return { uuid, save, clear, isLoading: isLoading || isVerifying, userData };
+  return { uuid, save, clear, isLoading: isLoading || isVerifying, userData, error };
 }
 
 export default function ClientLayout() {
-  const { save, isLoading, userData } = useLocalUuid();
+  const { save, isLoading, userData, error } = useLocalUuid();
 
   if (isLoading) {
     return (
@@ -83,7 +83,7 @@ export default function ClientLayout() {
   }
 
   if (!userData) {
-    return <UserAuth onUserSelected={save} />;
+    return <UserAuth onUserSelected={save} error={error} />;
   }
 
   return <TodoList userData={userData} isLoading={isLoading} />;

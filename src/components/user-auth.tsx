@@ -5,16 +5,14 @@ import { createUser } from "@/lib/actions";
 
 interface UserAuthProps {
   onUserSelected: (userId: string) => void;
+  error: string | null;
 }
 
-export default function UserAuth({ onUserSelected }: UserAuthProps) {
+export default function UserAuth({ onUserSelected, error }: UserAuthProps) {
   const [inputUuid, setInputUuid] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const handleCreateOrRestore = async () => {
-    setError(null);
-    
     startTransition(async () => {
       try {
         const trimmedInput = inputUuid.trim();
@@ -27,14 +25,12 @@ export default function UserAuth({ onUserSelected }: UserAuthProps) {
           const result = await createUser();
           if (result.success) {
             onUserSelected(result.userId!);
-          } else {
-            setError(result.error || "Failed to create user");
           }
         }
         
         setInputUuid("");
       } catch (e) {
-        setError(String(e));
+        console.error(e);
       }
     });
   };
