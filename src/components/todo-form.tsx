@@ -34,11 +34,13 @@ export default function TodoForm({ userId, onError, onSuccess }: TodoFormProps) 
   return (
     <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
       <input
+        name="todo"
         className="border rounded px-3 py-2 flex-1"
         placeholder="Add a todo"
         value={newText}
         onChange={(e) => setNewText(e.target.value)}
-        disabled={isPending}
+        // disabled={isPending} // Causes focus to be lost
+        autoFocus
       />
       <button 
         className="bg-black text-white px-4 py-2 rounded disabled:opacity-50" 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { createUser } from "@/lib/actions";
 
 interface UserAuthProps {
@@ -11,8 +11,14 @@ interface UserAuthProps {
 export default function UserAuth({ onUserSelected, error }: UserAuthProps) {
   const [inputUuid, setInputUuid] = useState("");
   const [isPending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleCreateOrRestore = async () => {
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleCreateOrRestore = async (e: React.FormEvent) => {
+    e.preventDefault();
     startTransition(async () => {
       try {
         const trimmedInput = inputUuid.trim();
@@ -38,20 +44,23 @@ export default function UserAuth({ onUserSelected, error }: UserAuthProps) {
   return (
     <div className="mb-6 p-4 border rounded">
       <p className="mb-2">Enter your UUID to restore, or leave blank to create a new one.</p>
-      <input
-        className="border rounded px-3 py-2 w-full mb-3 disabled:opacity-50"
-        placeholder="UUID"
-        value={inputUuid}
-        onChange={(e) => setInputUuid(e.target.value)}
-        disabled={isPending}
-      />
-      <button
-        className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-        onClick={handleCreateOrRestore}
-        disabled={isPending}
-      >
-        {isPending ? "Loading..." : "Continue"}
-      </button>
+      <form onSubmit={handleCreateOrRestore} className="space-y-3">
+        <input
+          ref={inputRef}
+          className="border rounded px-3 py-2 w-full disabled:opacity-50"
+          placeholder="UUID"
+          value={inputUuid}
+          onChange={(e) => setInputUuid(e.target.value)}
+          disabled={isPending}
+        />
+        <button
+          type="submit"
+          className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
+          disabled={isPending}
+        >
+          {isPending ? "Loading..." : "Continue"}
+        </button>
+      </form>
       {error && <p className="text-red-600 mt-2">{error}</p>}
     </div>
   );
