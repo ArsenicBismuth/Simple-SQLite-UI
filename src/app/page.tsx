@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 type ResetType = "DAILY" | "WEEKLY";
@@ -82,7 +82,6 @@ export default function Home() {
   };
 
   // No per-user updates now
-  const syncUpdateUser = async (_u: Partial<User>) => {};
 
   const addTodo = async (text: string) => {
     if (!uuid) return;
@@ -118,10 +117,18 @@ export default function Home() {
   };
 
   const [newText, setNewText] = useState("");
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-  const scheduleSummary = useMemo(() => {
-    return "Per-item reset: each todo controls its own schedule";
-  }, []);
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyFeedback("Copied!");
+      setTimeout(() => setCopyFeedback(null), 2000);
+    } catch {
+      setCopyFeedback("Failed to copy");
+      setTimeout(() => setCopyFeedback(null), 2000);
+    }
+  };
 
   return (
     <div className="font-sans min-h-screen p-6 max-w-3xl mx-auto">
@@ -149,18 +156,28 @@ export default function Home() {
 
       {uuid && bundle && (
         <div className="space-y-6">
-          <div className="p-4 border rounded">
-            <div className="flex justify-between items-center mb-2">
-              <div>
-                <div className="text-sm text-gray-500">Your UUID</div>
-                <div className="font-mono break-all">{bundle.user.id}</div>
+          <div className="p-4 py-3 border rounded">
+            <div className="flex justify-between items-start mb-2">
+              <div className="flex-1">
+                <div className="text-sm text-gray-500">User UUID</div>
+                <div className="relative">
+                  <button
+                    className="font-mono break-all text-left hover:bg-gray-100 p-2 rounded transition-colors cursor-pointer w-fit group flex items-center"
+                    onClick={() => copyToClipboard(bundle.user.id)}
+                  >
+                    {bundle.user.id}
+                    <span className="ml-2 opacity-0 group-hover:opacity-100 text-xs text-gray-500 transition-opacity">
+                      Copy
+                    </span>
+                  </button>
+                  {copyFeedback && (
+                    <div className="absolute top-full left-0 mt-1 bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
+                      {copyFeedback}
+                    </div>
+                  )}
+                </div>
               </div>
               <button className="text-sm underline" onClick={clear}>Sign out</button>
-            </div>
-            <div className="text-sm text-gray-600">{scheduleSummary}</div>
-
-            <div className="mt-3 text-sm text-gray-600">
-              Per-item reset: configure on each todo below.
             </div>
           </div>
 
@@ -228,14 +245,16 @@ export default function Home() {
                 const isEffectivelyDone = t.done && (!changedAt || (resetCutoff && changedAt >= resetCutoff));
 
                 return (
-                  <li key={t.id} className={cn("p-2 border rounded flex flex-col gap-2", isEffectivelyDone && "opacity-60")}>
+                  <li key={t.id} className={cn("py-2 px-3.5 border rounded flex flex-col gap-2", isEffectivelyDone && "opacity-60")}>
                     <div className="flex items-center gap-2">
                       <input
+                        name="done"
                         type="checkbox"
                         checked={isEffectivelyDone}
                         onChange={(e) => updateTodo(t.id, { done: e.target.checked }).catch((err) => setError(String(err)))}
                       />
                       <input
+                        name="name"
                         className="flex-1 outline-none"
                         value={t.text}
                         onChange={(e) => updateTodo(t.id, { text: e.target.value }).catch((err) => setError(String(err)))}
