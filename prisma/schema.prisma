@@ -3,11 +3,47 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../../node_modules/generated"
+  output   = "../node_modules/generated"
 }
 // Output due to error: https://github.com/prisma/prisma/discussions/23223#discussioncomment-12925452
 
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+// App models
+
+enum ResetType {
+  DAILY
+  WEEKLY
+}
+
+model User {
+  id           String    @id @default(uuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Schedule settings
+  resetType    ResetType @default(DAILY)
+  // For DAILY, reset at HH:00 local time (0-23)
+  resetHour    Int?      @default(9)
+  // For WEEKLY, day of week 0-6 (0=Sunday)
+  resetDow     Int?
+  // When the last reset was performed
+  lastResetAt  DateTime?
+
+  todos        Todo[]
+}
+
+model Todo {
+  id        String   @id @default(cuid())
+  userId    String
+  text      String
+  done      Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
