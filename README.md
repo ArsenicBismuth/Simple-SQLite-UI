@@ -2,7 +2,23 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+Before running the development server, you need to set up the database using Prisma:
+
+1. Create a `.env` file in the root directory and add your database URL:
+
+```
+DATABASE_URL="file:./dev.db"
+```
+
+2. Run the following command to generate the Prisma client:
+
+```bash
+npx prisma generate
+# or
+npm run prisma:generate
+```
+
+3. Run the following command to run the development server:
 
 ```bash
 npm run dev

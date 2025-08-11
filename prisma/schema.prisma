@@ -3,8 +3,9 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  output   = "../../node_modules/generated"
 }
+// Output due to error: https://github.com/prisma/prisma/discussions/23223#discussioncomment-12925452
 
 datasource db {
   provider = "sqlite"
