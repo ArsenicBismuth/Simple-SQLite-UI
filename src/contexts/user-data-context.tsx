@@ -3,17 +3,17 @@
 import { createContext, useContext } from "react";
 import type { GetUserWithTodosResult } from "@/types";
 
-export const UserDataContext = createContext<Promise<GetUserWithTodosResult> | null>(null);
+export const UserDataContext = createContext<GetUserWithTodosResult | null>(null);
 
 export function UserDataProvider({
   children,
-  userDataPromise,
+  userData,
 }: {
   children: React.ReactNode;
-  userDataPromise: Promise<GetUserWithTodosResult>;
+  userData: GetUserWithTodosResult;
 }) {
   return (
-    <UserDataContext.Provider value={userDataPromise}>
+    <UserDataContext.Provider value={userData}>
       {children}
     </UserDataContext.Provider>
   );

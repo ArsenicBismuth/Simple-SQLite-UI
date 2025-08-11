@@ -4,17 +4,24 @@ import { useCallback, useEffect, useState } from "react";
 import UserAuth from "@/components/user-auth";
 import TodoList from "@/components/todo-list";
 import { getUserWithTodos } from "@/lib/actions";
+import type { GetUserWithTodosResult } from "@/types";
 
 function useLocalUuid() {
   const [uuid, setUuid] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [userData, setUserData] = useState<GetUserWithTodosResult | null>(null);
+
+  useEffect(() => {
+    const storedUuid = localStorage.getItem("user_uuid");
+    if (storedUuid) {
+      setUuid(storedUuid);
+    }
+  }, []);
   
   useEffect(() => {
     async function verifyStoredUuid() {
-      const storedUuid = localStorage.getItem("user_uuid");
-      
-      if (!storedUuid) {
+      if (!uuid) {
         setUuid(null);
         setIsLoading(false);
         return;
@@ -23,10 +30,11 @@ function useLocalUuid() {
       // Verify the UUID exists in the database
       setIsVerifying(true);
       try {
-        const result = await getUserWithTodos(storedUuid);
+        const result = await getUserWithTodos(uuid);
         if (result.success) {
           // UUID is valid, use it
-          setUuid(storedUuid);
+          setUuid(uuid);
+          setUserData(result);
         } else {
           // UUID is invalid, clear it from localStorage
           localStorage.removeItem("user_uuid");
@@ -42,8 +50,10 @@ function useLocalUuid() {
       }
     }
 
-    verifyStoredUuid();
-  }, []);
+    if (uuid) {
+      verifyStoredUuid();
+    }
+  }, [uuid]);
 
   const save = useCallback((v: string) => {
     localStorage.setItem("user_uuid", v);
@@ -53,13 +63,14 @@ function useLocalUuid() {
   const clear = useCallback(() => {
     localStorage.removeItem("user_uuid");
     setUuid(null);
+    setUserData(null);
   }, []);
 
-  return { uuid, save, clear, isLoading: isLoading || isVerifying };
+  return { uuid, save, clear, isLoading: isLoading || isVerifying, userData };
 }
 
 export default function ClientLayout() {
-  const { uuid, save, isLoading } = useLocalUuid();
+  const { save, isLoading, userData } = useLocalUuid();
 
   if (isLoading) {
     return (
@@ -71,9 +82,9 @@ export default function ClientLayout() {
     );
   }
 
-  if (!uuid) {
+  if (!userData) {
     return <UserAuth onUserSelected={save} />;
   }
 
-  return <TodoList userId={uuid} />;
+  return <TodoList userData={userData} isLoading={isLoading} />;
 }

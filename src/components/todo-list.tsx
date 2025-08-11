@@ -1,7 +1,6 @@
-import { Suspense } from "react";
-import { getUserWithTodos } from "@/lib/actions";
 import { UserDataProvider } from "@/contexts/user-data-context";
 import UserDataConsumer from "@/components/user-data-consumer";
+import { GetUserWithTodosResult } from "@/types";
 
 // Loading skeleton for the entire data fetch
 function LoadingSkeleton() {
@@ -31,15 +30,10 @@ function LoadingSkeleton() {
 }
 
 // Main streaming component - Server Component that creates the promise and provides it via context
-export default function TodoList({ userId }: { userId: string }) {
-  // Create the promise for data fetching in Server Component
-  const userDataPromise = getUserWithTodos(userId);
-  
+export default function TodoList({ userData, isLoading }: { userData: GetUserWithTodosResult, isLoading: boolean }) {
   return (
-    <UserDataProvider userDataPromise={userDataPromise}>
-      <Suspense fallback={<LoadingSkeleton />}>
-        <UserDataConsumer />
-      </Suspense>
+    <UserDataProvider userData={userData}>
+      {isLoading ? <LoadingSkeleton /> : <UserDataConsumer />}
     </UserDataProvider>
   );
 }
