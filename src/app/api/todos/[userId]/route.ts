@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { ensureResetIfDue } from "@/lib/reset";
 
 export const runtime = "nodejs";
 
@@ -14,13 +13,18 @@ export async function POST(
     const text = String(body.text ?? "").trim();
     if (!text) return NextResponse.json({ error: "Text required" }, { status: 400 });
 
-    await ensureResetIfDue(userId);
-
     const maxOrder = await db.todo.aggregate({ where: { userId }, _max: { order: true } });
     const order = (maxOrder._max.order ?? 0) + 1;
 
-    const todo = await db.todo.create({ data: { userId, text, order } });
-    return NextResponse.json({ todo });
+    // Allow optional per-item reset params, default to daily 9:00
+    const data: any = { userId, text, order };
+    const rt = typeof body.resetType === "string" ? body.resetType.toUpperCase() : null;
+    if (rt === "DAILY" || rt === "WEEKLY") data.resetType = rt;
+    if (typeof body.resetHour === "number") data.resetHour = body.resetHour;
+    if (typeof body.resetDow === "number") data.resetDow = body.resetDow;
+
+    const todo = await db.todo.create({ data });
+    return NextResponse.json({ todo: { ...todo, statusChangedAt: todo.statusChangedAt ?? todo.updatedAt } });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
@@ -44,7 +48,10 @@ export async function PATCH(
 
     if (Array.isArray(body.bulkDone)) {
       const ids = body.bulkDone as string[];
-      await db.todo.updateMany({ where: { id: { in: ids }, userId }, data: { done: true } });
+    await db.todo.updateMany({
+      where: { id: { in: ids }, userId },
+      data: { done: true, statusChangedAt: new Date() },
+    });
       return NextResponse.json({ ok: true });
     }
 

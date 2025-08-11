@@ -24,15 +24,6 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  // Schedule settings
-  resetType    ResetType @default(DAILY)
-  // For DAILY, reset at HH:00 local time (0-23)
-  resetHour    Int?      @default(9)
-  // For WEEKLY, day of week 0-6 (0=Sunday)
-  resetDow     Int?
-  // When the last reset was performed
-  lastResetAt  DateTime?
-
   todos        Todo[]
 }
 
@@ -42,6 +33,14 @@ model Todo {
   text      String
   done      Boolean  @default(false)
   order     Int      @default(0)
+  // Per-item reset schedule
+  resetType ResetType @default(DAILY)
+  // For DAILY, reset at HH:00 local time (0-23)
+  resetHour Int?      @default(9)
+  // For WEEKLY, day of week 0-6 (0=Sunday)
+  resetDow  Int?
+  // When the todo's done/undone status last changed
+  statusChangedAt DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

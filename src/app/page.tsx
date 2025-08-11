@@ -9,14 +9,13 @@ type Todo = {
   text: string;
   done: boolean;
   order: number;
+  statusChangedAt?: string; // ISO from API
+  resetType?: ResetType;
+  resetHour?: number | null;
+  resetDow?: number | null;
 };
 
-type User = {
-  id: string;
-  resetType: ResetType;
-  resetHour: number | null;
-  resetDow: number | null; // 0 Sunday - 6 Saturday
-};
+type User = { id: string };
 
 type UserBundle = { user: User; todos: Todo[] };
 
@@ -82,17 +81,8 @@ export default function Home() {
     }
   };
 
-  const syncUpdateUser = async (u: Partial<User>) => {
-    if (!uuid) return;
-    const res = await fetch(`/api/users/${uuid}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(u),
-    });
-    if (!res.ok) throw new Error("Failed to update user");
-    const data = await res.json();
-    setBundle((prev) => (prev ? { ...prev, user: data.user } : prev));
-  };
+  // No per-user updates now
+  const syncUpdateUser = async (_u: Partial<User>) => {};
 
   const addTodo = async (text: string) => {
     if (!uuid) return;
@@ -130,15 +120,8 @@ export default function Home() {
   const [newText, setNewText] = useState("");
 
   const scheduleSummary = useMemo(() => {
-    if (!bundle) return "";
-    if (bundle.user.resetType === "DAILY") {
-      const hh = bundle.user.resetHour ?? 9;
-      return `Daily reset at ${hh.toString().padStart(2, "0")}:00`;
-    }
-    const d = bundle.user.resetDow ?? 1;
-    const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    return `Weekly reset on ${names[d]}`;
-  }, [bundle]);
+    return "Per-item reset: each todo controls its own schedule";
+  }, []);
 
   return (
     <div className="font-sans min-h-screen p-6 max-w-3xl mx-auto">
@@ -176,51 +159,8 @@ export default function Home() {
             </div>
             <div className="text-sm text-gray-600">{scheduleSummary}</div>
 
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-              <label className="flex flex-col gap-1">
-                <span className="text-sm">Reset type</span>
-                <select
-                  className="border rounded px-2 py-2"
-                  value={bundle.user.resetType}
-                  onChange={(e) => syncUpdateUser({ resetType: e.target.value as ResetType })}
-                >
-                  <option value="DAILY">Daily</option>
-                  <option value="WEEKLY">Weekly</option>
-                </select>
-              </label>
-
-              {bundle.user.resetType === "DAILY" && (
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm">Hour (0-23)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={23}
-                    className="border rounded px-2 py-2"
-                    value={bundle.user.resetHour ?? 9}
-                    onChange={(e) => syncUpdateUser({ resetHour: Number(e.target.value) })}
-                  />
-                </label>
-              )}
-
-              {bundle.user.resetType === "WEEKLY" && (
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm">Day of week</span>
-                  <select
-                    className="border rounded px-2 py-2"
-                    value={bundle.user.resetDow ?? 1}
-                    onChange={(e) => syncUpdateUser({ resetDow: Number(e.target.value) })}
-                  >
-                    <option value={0}>Sunday</option>
-                    <option value={1}>Monday</option>
-                    <option value={2}>Tuesday</option>
-                    <option value={3}>Wednesday</option>
-                    <option value={4}>Thursday</option>
-                    <option value={5}>Friday</option>
-                    <option value={6}>Saturday</option>
-                  </select>
-                </label>
-              )}
+            <div className="mt-3 text-sm text-gray-600">
+              Per-item reset: configure on each todo below.
             </div>
           </div>
 
@@ -248,24 +188,107 @@ export default function Home() {
             </form>
 
             <ul className="space-y-2">
-              {bundle.todos.map((t) => (
-                <li key={t.id} className={cn("p-2 border rounded flex items-center gap-2", t.done && "opacity-60")}
-                >
-                  <input
-                    type="checkbox"
-                    checked={t.done}
-                    onChange={(e) => updateTodo(t.id, { done: e.target.checked }).catch((err) => setError(String(err)))}
-                  />
-                  <input
-                    className="flex-1 outline-none"
-                    value={t.text}
-                    onChange={(e) => updateTodo(t.id, { text: e.target.value }).catch((err) => setError(String(err)))}
-                  />
-                  <button className="text-sm underline" onClick={() => deleteTodo(t.id).catch((e) => setError(String(e)))}>
-                    Delete
-                  </button>
-                </li>
-              ))}
+              {bundle.todos.map((t) => {
+                const now = new Date();
+                let resetCutoff: Date | null = null;
+                const resetType = t.resetType ?? "DAILY";
+                if (resetType === "DAILY") {
+                  const hh = t.resetHour ?? 9;
+                  const today = new Date(now);
+                  today.setHours(0, 0, 0, 0);
+                  const todayReset = new Date(today);
+                  todayReset.setHours(hh, 0, 0, 0);
+                  // if not yet reached today, use yesterday's reset
+                  if (now.getTime() >= todayReset.getTime()) {
+                    resetCutoff = todayReset;
+                  } else {
+                    const y = new Date(todayReset);
+                    y.setDate(y.getDate() - 1);
+                    resetCutoff = y;
+                  }
+                } else {
+                  const dow = t.resetDow ?? 1; // Monday default
+                  const weekStart = new Date(now);
+                  weekStart.setHours(0, 0, 0, 0);
+                  // get to Sunday
+                  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                  const target = new Date(weekStart);
+                  target.setDate(target.getDate() + dow);
+                  // weekly reset is at 00:00 of that day
+                  if (now.getTime() >= target.getTime()) {
+                    resetCutoff = target;
+                  } else {
+                    const prev = new Date(target);
+                    prev.setDate(prev.getDate() - 7);
+                    resetCutoff = prev;
+                  }
+                }
+
+                const changedAt = t.statusChangedAt ? new Date(t.statusChangedAt) : null;
+                const isEffectivelyDone = t.done && (!changedAt || (resetCutoff && changedAt >= resetCutoff));
+
+                return (
+                  <li key={t.id} className={cn("p-2 border rounded flex flex-col gap-2", isEffectivelyDone && "opacity-60")}>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={isEffectivelyDone}
+                        onChange={(e) => updateTodo(t.id, { done: e.target.checked }).catch((err) => setError(String(err)))}
+                      />
+                      <input
+                        className="flex-1 outline-none"
+                        value={t.text}
+                        onChange={(e) => updateTodo(t.id, { text: e.target.value }).catch((err) => setError(String(err)))}
+                      />
+                      <button className="text-sm underline" onClick={() => deleteTodo(t.id).catch((e) => setError(String(e)))}>
+                        Delete
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-gray-500">Reset:</span>
+                      <select
+                        className="border rounded px-2 py-1"
+                        value={t.resetType ?? "DAILY"}
+                        onChange={(e) => updateTodo(t.id, { resetType: e.target.value as ResetType }).catch((err) => setError(String(err)))}
+                      >
+                        <option value="DAILY">Daily</option>
+                        <option value="WEEKLY">Weekly</option>
+                      </select>
+                      {((t.resetType ?? "DAILY") === "DAILY") && (
+                        <>
+                          <span className="text-gray-500">Hour</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={23}
+                            className="border rounded px-2 py-1 w-20"
+                            value={t.resetHour ?? 9}
+                            onChange={(e) => updateTodo(t.id, { resetHour: Number(e.target.value) }).catch((err) => setError(String(err)))}
+                          />
+                        </>
+                      )}
+                      {((t.resetType ?? "DAILY") === "WEEKLY") && (
+                        <>
+                          <span className="text-gray-500">Day</span>
+                          <select
+                            className="border rounded px-2 py-1"
+                            value={t.resetDow ?? 1}
+                            onChange={(e) => updateTodo(t.id, { resetDow: Number(e.target.value) }).catch((err) => setError(String(err)))}
+                          >
+                            <option value={0}>Sun</option>
+                            <option value={1}>Mon</option>
+                            <option value={2}>Tue</option>
+                            <option value={3}>Wed</option>
+                            <option value={4}>Thu</option>
+                            <option value={5}>Fri</option>
+                            <option value={6}>Sat</option>
+                          </select>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
