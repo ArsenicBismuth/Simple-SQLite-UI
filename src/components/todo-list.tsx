@@ -30,10 +30,18 @@ function LoadingSkeleton() {
 }
 
 // Main streaming component - Server Component that creates the promise and provides it via context
-export default function TodoList({ userData, isLoading }: { userData: GetUserWithTodosResult, isLoading: boolean }) {
+export default function TodoList({ 
+  userData, 
+  isLoading, 
+  onDataChange 
+}: { 
+  userData: GetUserWithTodosResult, 
+  isLoading: boolean,
+  onDataChange?: () => void 
+}) {
   return (
     <UserDataProvider userData={userData}>
-      {isLoading ? <LoadingSkeleton /> : <UserDataConsumer />}
+      {isLoading ? <LoadingSkeleton /> : <UserDataConsumer onDataChange={onDataChange} />}
     </UserDataProvider>
   );
 }

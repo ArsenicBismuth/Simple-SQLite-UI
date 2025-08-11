@@ -21,6 +21,22 @@ function useLocalUuid() {
       setUuid(storedUuid);
     }
   }, []);
+
+  // Function to refresh user data
+  const refreshUserData = useCallback(async (userId: string) => {
+    try {
+      const result = await getUserWithTodos(userId);
+      if (result.success) {
+        setUserData(result);
+        setError(null);
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError("Failed to refresh data");
+      console.error("Failed to refresh user data:", err);
+    }
+  }, []);
   
   useEffect(() => {
     async function verifyStoredUuid() {
@@ -76,11 +92,11 @@ function useLocalUuid() {
     setUserData(null);
   }, []);
 
-  return { uuid, save, clear, isLoading: isLoading || isVerifying, userData, admin, error };
+  return { uuid, save, clear, isLoading: isLoading || isVerifying, userData, admin, error, refreshUserData };
 }
 
 export default function ClientLayout() {
-  const { uuid, save, isLoading, userData, admin, error } = useLocalUuid();
+  const { uuid, save, isLoading, userData, admin, error, refreshUserData } = useLocalUuid();
 
   if (isLoading) {
     return (
@@ -99,7 +115,13 @@ export default function ClientLayout() {
   return (
     <div>
       {admin && uuid && <AdminPanel currentUserId={uuid} />}
-      {!admin && userData && <TodoList userData={userData} isLoading={isLoading} />}
+      {!admin && userData && userData.success && (
+        <TodoList 
+          userData={userData} 
+          isLoading={isLoading} 
+          onDataChange={() => refreshUserData(userData.user.id)} 
+        />
+      )}
     </div>
   );
 }

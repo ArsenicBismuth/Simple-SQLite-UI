@@ -5,7 +5,7 @@ import UserDisplay from "./user-display";
 import TodoDisplay from "./todo-display";
 import UserError from "./user-error";
 
-export default function UserDataConsumer() {
+export default function UserDataConsumer({ onDataChange }: { onDataChange?: () => void }) {
   const result = useUserDataContext();
   
   if (!result.success) {
@@ -15,7 +15,7 @@ export default function UserDataConsumer() {
   return (
     <div className="space-y-6">
       <UserDisplay userId={result.user.id} />
-      <TodoDisplay userId={result.user.id} todos={result.todos} />
+      <TodoDisplay userId={result.user.id} todos={result.todos} onDataChange={onDataChange} />
     </div>
   );
 }

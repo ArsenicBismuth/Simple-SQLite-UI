@@ -7,13 +7,18 @@ import type { Todo } from "@/types";
 interface TodoDisplayProps {
   userId: string;
   todos: Todo[];
+  onDataChange?: () => void;
 }
 
-export default function TodoDisplay({ userId, todos }: TodoDisplayProps) {
+export default function TodoDisplay({ userId, todos, onDataChange }: TodoDisplayProps) {
   return (
     <div className="p-4 border rounded">
       <h2 className="font-semibold mb-3">Todos ({todos.length})</h2>
-      <TodoForm userId={userId} onError={(error) => console.error(error)} />
+      <TodoForm 
+        userId={userId} 
+        onError={(error) => console.error(error)} 
+        onSuccess={onDataChange}
+      />
       <ul className="space-y-2">
         {todos.map((todo) => (
           <TodoItem 
@@ -21,6 +26,7 @@ export default function TodoDisplay({ userId, todos }: TodoDisplayProps) {
             todo={todo} 
             userId={userId}
             onError={(error) => console.error(error)}
+            onSuccess={onDataChange}
           />
         ))}
         {todos.length === 0 && (

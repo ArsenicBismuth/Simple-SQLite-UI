@@ -8,9 +8,10 @@ import { addTodo } from "@/lib/actions";
 interface TodoFormProps {
   userId: string;
   onError: (error: string) => void;
+  onSuccess?: () => void;
 }
 
-export default function TodoForm({ userId, onError }: TodoFormProps) {
+export default function TodoForm({ userId, onError, onSuccess }: TodoFormProps) {
   const [newText, setNewText] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -23,6 +24,7 @@ export default function TodoForm({ userId, onError }: TodoFormProps) {
       const result = await addTodo(userId, text);
       if (result.success) {
         setNewText("");
+        onSuccess?.();
       } else {
         onError(result.error || "Failed to add todo");
       }

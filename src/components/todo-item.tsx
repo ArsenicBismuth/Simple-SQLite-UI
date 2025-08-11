@@ -21,9 +21,10 @@ interface TodoItemProps {
   todo: Todo;
   userId: string;
   onError: (error: string) => void;
+  onSuccess?: () => void;
 }
 
-export default function TodoItem({ todo, userId, onError }: TodoItemProps) {
+export default function TodoItem({ todo, userId, onError, onSuccess }: TodoItemProps) {
   const [isPending, startTransition] = useTransition();
   const [optimisticTodo, addOptimisticTodo] = useOptimistic(
     todo,
@@ -72,7 +73,9 @@ export default function TodoItem({ todo, userId, onError }: TodoItemProps) {
     
     startTransition(async () => {
       const result = await updateTodo(userId, optimisticTodo.id, updates);
-      if (!result.success) {
+      if (result.success) {
+        onSuccess?.();
+      } else {
         onError(result.error || "Failed to update todo");
       }
     });
@@ -81,7 +84,9 @@ export default function TodoItem({ todo, userId, onError }: TodoItemProps) {
   const handleDelete = async () => {
     startTransition(async () => {
       const result = await deleteTodo(userId, optimisticTodo.id);
-      if (!result.success) {
+      if (result.success) {
+        onSuccess?.();
+      } else {
         onError(result.error || "Failed to delete todo");
       }
     });
